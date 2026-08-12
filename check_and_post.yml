@@ -1,9 +1,6 @@
 name: Check schedule and post if due
 
-on:
-  schedule:
-    - cron: "*/15 * * * *"
-  workflow_dispatch: {}
+on: {schedule: [{cron: "*/15 * * * *"}], workflow_dispatch: {}}
 
 permissions:
   contents: write
