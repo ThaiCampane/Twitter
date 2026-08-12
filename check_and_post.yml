@@ -2,8 +2,6 @@ name: Check schedule and post if due
 
 on:
   schedule:
-    # 15분마다 실행. GitHub 무료 크론은 정확히 그 분에 안 도는 경우가 있으니
-    # 여유를 두고 싶으면 간격을 더 넓혀도 됩니다.
     - cron: "*/15 * * * *"
   workflow_dispatch: {}
 
