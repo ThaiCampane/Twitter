@@ -2,9 +2,8 @@ name: Generate daily posting schedule
 
 on:
   schedule:
-    # 매일 00:05 UTC = 07:05 방콕 시간. 필요하면 시간 조정하세요.
     - cron: "5 0 * * *"
-  workflow_dispatch: {}   # 수동 실행 버튼용
+  workflow_dispatch: {}
 
 permissions:
   contents: write
