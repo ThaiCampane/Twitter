@@ -83,21 +83,21 @@ def _load() -> dict | None:
 
 
 def get_due_slot_index() -> int | None:
-    """
-    오늘 스케줄 중, 아직 안 올렸고 예정 시각이 지난 슬롯의 인덱스를 반환.
-    없으면 None. 날짜가 바뀌었는데 스케줄이 없으면 None (스케줄 생성 워크플로우가
-    먼저 돌아야 함).
-    """
     schedule = _load()
     if schedule is None:
+        print("[DEBUG] schedule.json 자체를 못 읽음")
         return None
 
     today = _now().strftime("%Y-%m-%d")
+    print(f"[DEBUG] 계산된 오늘 날짜(today)={today}, schedule.json의 date={schedule.get('date')}")
     if schedule.get("date") != today:
-        return None  # 오늘자 스케줄이 아직 안 만들어짐
+        print("[DEBUG] 날짜 불일치로 종료")
+        return None
 
     now_time = _now().strftime("%H:%M")
+    print(f"[DEBUG] 계산된 현재 시각(now_time)={now_time}")
     for i, slot in enumerate(schedule["slots"]):
+        print(f"[DEBUG] 슬롯 확인: time={slot['time']}, posted={slot['posted']}")
         if not slot["posted"] and slot["time"] <= now_time:
             return i
     return None
