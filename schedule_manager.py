@@ -3,7 +3,7 @@
 
 방식:
   1) 매일 새벽 한 번 main_schedule.py 가 실행되어, 오늘 올릴 랜덤 시각
-     (1~2개)을 정해서 schedule.json 에 저장합니다.
+     (4~5개)을 정해서 schedule.json 에 저장합니다.
   2) 이후 main_post.py 가 짧은 주기(예: 15분)로 계속 실행되며,
      "지금 이 시각이 오늘 예정된 포스팅 시각을 지났고 아직 안 올렸는가?"를
      확인해서, 맞으면 트윗을 생성/게시하고 posted=true 로 표시합니다.
@@ -28,7 +28,7 @@ WINDOW_END_HOUR = 23
 
 MIN_POSTS_PER_DAY = 4
 MAX_POSTS_PER_DAY = 5
-MIN_GAP_MINUTES = 90  # 하루 2건일 때 너무 붙어서 올라오지 않도록 최소 간격
+MIN_GAP_MINUTES = 90  # 슬롯끼리 너무 붙어서 올라오지 않도록 최소 간격
 
 
 def _now() -> datetime:
@@ -83,21 +83,21 @@ def _load() -> dict | None:
 
 
 def get_due_slot_index() -> int | None:
+    """
+    오늘 스케줄 중, 아직 안 올렸고 예정 시각이 지난 슬롯의 인덱스를 반환.
+    없으면 None. 날짜가 바뀌었는데 스케줄이 없으면 None (스케줄 생성 워크플로우가
+    먼저 돌아야 함).
+    """
     schedule = _load()
     if schedule is None:
-        print("[DEBUG] schedule.json 자체를 못 읽음")
         return None
 
     today = _now().strftime("%Y-%m-%d")
-    print(f"[DEBUG] 계산된 오늘 날짜(today)={today}, schedule.json의 date={schedule.get('date')}")
     if schedule.get("date") != today:
-        print("[DEBUG] 날짜 불일치로 종료")
-        return None
+        return None  # 오늘자 스케줄이 아직 안 만들어짐
 
     now_time = _now().strftime("%H:%M")
-    print(f"[DEBUG] 계산된 현재 시각(now_time)={now_time}")
     for i, slot in enumerate(schedule["slots"]):
-        print(f"[DEBUG] 슬롯 확인: time={slot['time']}, posted={slot['posted']}")
         if not slot["posted"] and slot["time"] <= now_time:
             return i
     return None
