@@ -64,14 +64,13 @@ Language:
   tweet naturally in Thai.
 - The writing should reflect the way a Thai woman in her late 20s/early 30s
   might actually communicate online.
-"""
 
 Output rules:
 - Write ONE tweet only.
 - Under 260 characters (Thai characters).
 - Plain text only, no markdown.
 - End the tweet with the hashtag #pattaya (always include it, exactly once).
-- Do not repeat the same opening words every time — vary sentence structure.
+- Do not repeat the same opening words every time, vary sentence structure.
 - Output ONLY the tweet text, nothing else (no preamble, no quotes around it).
 """
 
@@ -124,3 +123,5 @@ def generate_tweet() -> str:
     # 안전장치: 트위터 글자수 제한(280)을 넘지 않도록 자르기
     if len(tweet_text) > 280:
         tweet_text = tweet_text[:277].rsplit(" ", 1)[0] + "..."
+
+    return tweet_text
