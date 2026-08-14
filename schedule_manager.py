@@ -26,8 +26,8 @@ TIMEZONE = ZoneInfo(os.environ.get("POST_TIMEZONE", "Asia/Bangkok"))
 WINDOW_START_HOUR = 8
 WINDOW_END_HOUR = 23
 
-MIN_POSTS_PER_DAY = 1
-MAX_POSTS_PER_DAY = 2
+MIN_POSTS_PER_DAY = 4
+MAX_POSTS_PER_DAY = 5
 MIN_GAP_MINUTES = 90  # 하루 2건일 때 너무 붙어서 올라오지 않도록 최소 간격
 
 
