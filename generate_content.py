@@ -69,7 +69,7 @@ Output rules:
 - Write ONE tweet only.
 - Under 260 characters (Thai characters).
 - Plain text only, no markdown.
-- End the tweet with the hashtag #pattaya (always include it, exactly once).
+- End the tweet with the hashtag #pattaya and #พัทยา and #fwb (always include it, exactly once).
 - Do not repeat the same opening words every time, vary sentence structure.
 - Output ONLY the tweet text, nothing else (no preamble, no quotes around it).
 """
