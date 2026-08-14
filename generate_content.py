@@ -69,29 +69,82 @@ Output rules:
 - Write ONE tweet only.
 - Under 260 characters (Thai characters).
 - Plain text only, no markdown.
-- End the tweet with the hashtag #pattaya and #พัทยา and #fwb (always include it, exactly once).
+- End the tweet with both hashtags #pattaya and #พัทยา (always include both,
+  exactly once each, together at the end).
 - Do not repeat the same opening words every time, vary sentence structure.
 - Output ONLY the tweet text, nothing else (no preamble, no quotes around it).
 """
 
-# 매번 조금씩 다른 방향으로 유도하기 위한 주제 로테이션
+# 매번 조금씩 다른 방향으로 유도하기 위한 주제 로테이션.
+# 각 항목은 (텍스트 프롬프트용 설명, 이미지 프롬프트용 장면 설명) 튜플입니다.
+# 이미지 장면 설명은 generate_image.py 에서 그대로 재사용됩니다.
 TOPIC_SEEDS = [
-    "a moment from today's gym session",
-    "a small cultural difference you noticed today between Japan and Thailand",
-    "a new person you met recently and what that was like",
-    "a reflection on how your Thai (or English) is improving or not",
-    "food you ate today and a short story around it",
-    "a thought about dating/meeting people as a foreigner in Thailand",
-    "a workout milestone or a lesson learned from training",
-    "something about your neighborhood or daily routine in Pattaya",
-    "a friendship that's been forming with someone local",
-    "an honest, low-key reflection on loneliness or connection while living abroad",
+    (
+        "a moment from today's gym session",
+        "at a modern gym in Pattaya, mid-workout, gym clothes, "
+        "weights or cardio equipment in the background",
+    ),
+    (
+        "a small cultural difference you noticed today between Japan and Thailand",
+        "casually walking through a Pattaya street market or sidewalk, "
+        "everyday Thai city scenery in the background",
+    ),
+    (
+        "a new person you met recently and what that was like",
+        "sitting at a casual outdoor cafe table in Pattaya, relaxed pose",
+    ),
+    (
+        "a reflection on how your Thai (or English) is improving or not",
+        "sitting at a small desk or cafe corner with a notebook or phone, "
+        "soft indoor lighting",
+    ),
+    (
+        "food you ate today and a short story around it",
+        "at a Thai street food stall or restaurant table in Pattaya, "
+        "food visible nearby",
+    ),
+    (
+        "a thought about dating/meeting people as a foreigner in Thailand",
+        "walking along Pattaya beach promenade in the evening, "
+        "warm sunset lighting",
+    ),
+    (
+        "a workout milestone or a lesson learned from training",
+        "just finished a workout, gym locker room or gym entrance background, "
+        "slightly tired but happy expression",
+    ),
+    (
+        "something about your neighborhood or daily routine in Pattaya",
+        "on the balcony or street outside her apartment in Pattaya, "
+        "everyday morning atmosphere",
+    ),
+    (
+        "a friendship that's been forming with someone local",
+        "sitting on a bench in a Pattaya park or public space, casual daytime",
+    ),
+    (
+        "an honest, low-key reflection on loneliness or connection while living abroad",
+        "sitting alone by a window at night, city lights of Pattaya visible outside",
+    ),
 ]
 
 
-def generate_tweet() -> str:
-    """AI API를 호출해 트윗 한 건을 생성해서 반환합니다."""
-    topic = random.choice(TOPIC_SEEDS)
+def pick_topic() -> tuple[str, str]:
+    """(텍스트용 주제 설명, 이미지용 장면 설명) 튜플을 하나 뽑아서 반환합니다.
+
+    main_post.py 에서 이 함수로 한 번만 주제를 뽑고, 텍스트/이미지 생성에
+    동일하게 넘겨서 트윗 내용과 사진 배경이 서로 어긋나지 않게 합니다.
+    """
+    return random.choice(TOPIC_SEEDS)
+
+
+def generate_tweet(topic_text: str | None = None) -> str:
+    """AI API를 호출해 트윗 한 건을 생성해서 반환합니다.
+
+    topic_text 를 지정하지 않으면 내부적으로 랜덤 주제를 하나 뽑아 사용합니다.
+    """
+    if topic_text is None:
+        topic_text, _ = pick_topic()
 
     response = requests.post(
         ANTHROPIC_API_URL,
@@ -107,7 +160,7 @@ def generate_tweet() -> str:
             "messages": [
                 {
                     "role": "user",
-                    "content": f"Write today's tweet. Topic angle to draw from: {topic}",
+                    "content": f"Write today's tweet. Topic angle to draw from: {topic_text}",
                 }
             ],
         },
@@ -125,3 +178,9 @@ def generate_tweet() -> str:
         tweet_text = tweet_text[:277].rsplit(" ", 1)[0] + "..."
 
     return tweet_text
+
+
+if __name__ == "__main__":
+    _, scene = pick_topic()
+    print(generate_tweet())
+    print(f"(matching image scene: {scene})")
