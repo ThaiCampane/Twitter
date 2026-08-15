@@ -78,6 +78,10 @@ Output rules:
 # 매번 조금씩 다른 방향으로 유도하기 위한 주제 로테이션.
 # 각 항목은 (텍스트 프롬프트용 설명, 이미지 프롬프트용 장면 설명) 튜플입니다.
 # 이미지 장면 설명은 generate_image.py 에서 그대로 재사용됩니다.
+# 매번 조금씩 다른 방향으로 유도하기 위한 주제 로테이션.
+# 각 항목은 (텍스트 프롬프트용 설명, 이미지 프롬프트용 장면 설명) 튜플입니다.
+# 이미지 장면 설명은 generate_image.py 에서 그대로 재사용됩니다.
+# 헬스장 장면은 일부러 비중을 낮추고, 집/일상 장면(침실 제외)을 더 넣었습니다.
 TOPIC_SEEDS = [
     (
         "a moment from today's gym session",
@@ -109,14 +113,8 @@ TOPIC_SEEDS = [
         "warm sunset lighting",
     ),
     (
-        "a workout milestone or a lesson learned from training",
-        "just finished a workout, gym locker room or gym entrance background, "
-        "slightly tired but happy expression",
-    ),
-    (
         "something about your neighborhood or daily routine in Pattaya",
-        "on the balcony or street outside her apartment in Pattaya, "
-        "everyday morning atmosphere",
+        "on the balcony of her apartment in Pattaya, everyday morning atmosphere",
     ),
     (
         "a friendship that's been forming with someone local",
@@ -124,7 +122,28 @@ TOPIC_SEEDS = [
     ),
     (
         "an honest, low-key reflection on loneliness or connection while living abroad",
-        "sitting alone by a window at night, city lights of Pattaya visible outside",
+        "sitting by the living room window at night, city lights of Pattaya visible outside",
+    ),
+    (
+        "a relaxed moment at home doing nothing in particular",
+        "sitting on the sofa in her living room at home, relaxed everyday atmosphere",
+    ),
+    (
+        "getting ready to go out and the little routine around it",
+        "standing in front of a mirror at home doing a casual mirror selfie, "
+        "getting-ready atmosphere",
+    ),
+    (
+        "a small moment while making or having coffee/tea at home",
+        "in her kitchen at home making coffee or tea, casual morning atmosphere",
+    ),
+    (
+        "a thought that came up while doing laundry or tidying up",
+        "in the living room or hallway of her apartment, casual household moment",
+    ),
+    (
+        "people-watching or just observing life around her",
+        "sitting at a window-side seat in a cafe, looking out at the street",
     ),
 ]
 
