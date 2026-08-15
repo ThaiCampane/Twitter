@@ -44,18 +44,14 @@ IDENTITY_LOCK_INSTRUCTION = (
     "new scene: "
 )
 
-# 태국(파타야)은 연중 덥고 습한 열대 기후이므로, 장면 설명에 계절/날씨가
-# 따로 명시되지 않는 한 반팔/민소매/원피스 등 여름 옷차림을 기본으로 하도록
-# 강하게 강제합니다. (이전 버전보다 문구를 더 단정적으로 바꿔서, 원본 사진의
-# 긴팔 옷차림을 계속 따라가는 경향을 줄였습니다.)
+# 태국(파타야)은 연중 덥고 습한 열대 기후이므로, 무겁고 두꺼운 옷(패딩,
+# 니트, 자켓 등)은 피하도록 기본 원칙만 잡아줍니다. 구체적인 옷차림 자체는
+# 아래 CLOTHING_STYLES 에서 매번 무작위로 골라 지정합니다.
 CLIMATE_INSTRUCTION = (
     "This is Pattaya, Thailand — a tropical location that is hot and humid "
-    "year-round, roughly 30-34°C (86-93°F). The person must be dressed in "
-    "short-sleeve or sleeveless summer clothing appropriate for hot weather: "
-    "tank tops, short-sleeve t-shirts, sundresses, shorts, athletic wear, "
-    "crop tops, or similar. Do NOT put her in long sleeves, jackets, hoodies, "
-    "sweaters, or any heavy/cold-weather clothing, unless the scene explicitly "
-    "describes a cold or indoor air-conditioned setting. "
+    "year-round. Avoid heavy, cold-weather clothing (padded jackets, thick "
+    "sweaters, winter coats), unless the scene explicitly describes a cold "
+    "or heavily air-conditioned indoor setting. "
 )
 
 # 체형 일관성을 위한 고정 지시 (매번 랜덤이 아니라 항상 동일하게 적용).
@@ -63,6 +59,27 @@ BODY_TYPE_INSTRUCTION = (
     "Body type: slim and slender build, with a curvy, hourglass silhouette "
     "(defined waist, fuller bust and hips proportionate to her slim frame). "
     "Keep this body type consistent in every image. "
+)
+
+# 매번 무작위로 고르는 옷차림. 치마+스타킹 조합을 포함해 여러 스타일을
+# 섞어서, 매번 같은 옷차림(예: 운동복)만 반복되지 않도록 합니다.
+# 장면 자체가 특정 복장을 요구하면(예: 헬스장) 그 장면 설명이 우선 적용되도록
+# 프롬프트에서 안내 문구를 같이 넣습니다.
+CLOTHING_STYLES = [
+    "a casual skirt with sheer stockings and a fitted top",
+    "a knee-length skirt with knee-high stockings and sneakers",
+    "a short sundress",
+    "a skirt with a simple casual blouse",
+    "shorts and a casual t-shirt",
+    "a tank top and shorts",
+    "a casual off-shoulder top with a skirt",
+    "relaxed loungewear (oversized t-shirt and shorts) for a day at home",
+]
+
+CLOTHING_INSTRUCTION_TEMPLATE = (
+    "Clothing: {style}. If the scene itself clearly calls for specific "
+    "attire (for example, workout clothes for a gym scene), use that "
+    "instead of this default. "
 )
 
 EXPRESSIONS = [
@@ -124,11 +141,13 @@ def generate_persona_image(scene_description: str, output_path: str = "output_im
     pose = random.choice(POSES)
     framing = random.choice(FRAMINGS)
     lighting = random.choice(LIGHTING)
+    clothing_style = random.choice(CLOTHING_STYLES)
 
     prompt = (
         IDENTITY_LOCK_INSTRUCTION
         + BODY_TYPE_INSTRUCTION
         + CLIMATE_INSTRUCTION
+        + CLOTHING_INSTRUCTION_TEMPLATE.format(style=clothing_style)
         + f"Facial expression: {expression}. "
         + f"Pose: {pose}. "
         + f"Camera framing: {framing}. "
