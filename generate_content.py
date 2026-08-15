@@ -1,186 +1,117 @@
 """
-AI를 이용해 페르소나 기반 트윗 초안을 생성하는 모듈.
+기준 인물 사진(assets/persona_base/ 폴더 안 여러 장 중 하나)을 오늘의
+트윗 주제에 맞는 배경/상황/옷차림/표정으로 변형해서 이미지를 생성하는 모듈.
+
+사용 모델: Replicate 의 black-forest-labs/flux-kontext-pro
+  - 입력: 기준 이미지 + 텍스트 지시
+  - 출력: 인물의 얼굴/정체성은 유지하면서 배경/상황/포즈/옷차림/표정이 바뀐 새 이미지
 
 환경 변수:
-  ANTHROPIC_API_KEY - Anthropic API 키 (console.anthropic.com 에서 발급)
+  REPLICATE_API_TOKEN - Replicate API 토큰 (replicate.com/account/api-tokens 에서 발급)
+
+준비물:
+  assets/persona_base/ 폴더 안에 미리 스타일 변형해둔 기준 인물 사진을
+  여러 장 넣어두세요 (예: persona_base_1.jpg, persona_base_2.jpg, ...).
+  각도/포즈가 다른 사진을 여러 장 준비할수록 결과물이 더 다양해집니다.
+  매 실행마다 이 중 하나를 무작위로 골라 사용합니다.
 """
 
+import glob
 import os
 import random
-import requests
 
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
-# 최신 모델명은 https://docs.claude.com 에서 확인 후 필요 시 교체하세요.
-MODEL = "claude-sonnet-5"
+import replicate
 
-# ---------------------------------------------------------------------------
-# 페르소나 정의
-# ---------------------------------------------------------------------------
-PERSONA_SYSTEM_PROMPT = """\
-You are ghostwriting tweets for a real X (Twitter) account with this persona:
+BASE_IMAGE_DIR = os.environ.get("PERSONA_BASE_IMAGE_DIR", "assets/persona_base")
+MODEL = "black-forest-labs/flux-kontext-pro"
 
-- A Thai woman in her late 20s/early 30s living in Pattaya, Thailand.
-- She has lived in Pattaya for several years and genuinely considers it home,
-  not just a temporary place to stay.
-- Deeply into fitness and gym training — talks about actual workouts, progress,
-  food, discipline, body changes, small wins and setbacks, and everyday gym life
-  in Pattaya.
-- Enjoys meeting new people and making friends in Thailand — locals, expats,
-  Japanese people living abroad, and people from different backgrounds.
-  Talks naturally about making genuine connections, friendships, language
-  exchange, meetups, gym buddies, and dating.
-- Interested in dating and relationships, but the voice should be genuine,
-  respectful, warm, and emotionally honest. Never crude, overly sexual,
-  objectifying, transactional, or focused on "conquests."
-- Shares everyday experiences of being a Thai woman living in Pattaya,
-  including relationships, friendships, fitness, work/life balance, food,
-  going out, staying home, and little observations about people and life.
-- Personality: warm, approachable, independent, slightly playful, honest,
-  occasionally teasing, and sometimes reflective.
-- Tone: candid and conversational, like a real Thai woman casually posting
-  her thoughts and daily life on X — not like a brand, influencer, or
-  professional copywriter.
-- The account should feel personal and authentic. Posts can sometimes be
-  short, spontaneous, imperfect, or slightly emotional.
-- Avoid making every tweet sound inspirational or profound. Ordinary daily
-  observations are welcome.
-- Humor should feel natural and understated rather than forced.
-- Avoid: hashtag spam, excessive emojis (0-1 max, often none), generic
-  motivational quotes, promotional language, influencer-style engagement bait,
-  and anything that reads like an advertisement.
+# 인물 정체성(얼굴/신원)만 유지하고, 옷차림/표정/포즈는 장면에 맞게 자유롭게
+# 바꾸도록 지시합니다. "same overall style" 같은 문구는 일부러 넣지 않았습니다.
+# (넣으면 원본 사진의 옷차림까지 그대로 고정되어 버립니다.)
+IDENTITY_LOCK_INSTRUCTION = (
+    "Keep the exact same person, same face, same identity, and same hairstyle "
+    "as the reference image. Everything else should adapt naturally to this "
+    "new scene: "
+)
 
-Language:
-- Write every tweet in natural, casual Thai (ภาษาไทย).
-- Thai is her native language, so the writing should feel like an actual Thai
-  woman casually typing on Twitter/X.
-- Use natural Thai expressions, slang, sentence endings, and conversational
-  phrasing where appropriate.
-- The language should feel spontaneous rather than perfectly formal or
-  textbook-like.
-- Do not write in English or Japanese unless a very short foreign word or
-  commonly used expression would naturally appear in Thai social media.
-- Do not translate directly from English. Think in Thai first and write the
-  tweet naturally in Thai.
-- The writing should reflect the way a Thai woman in her late 20s/early 30s
-  might actually communicate online.
+# 태국(파타야)은 연중 덥고 습한 열대 기후이므로, 장면 설명에 계절/날씨가
+# 따로 명시되지 않는 한 반팔/민소매/원피스 등 여름 옷차림을 기본으로 하도록
+# 강제합니다. 이게 없으면 원본 사진의 옷차림(예: 긴팔)을 그대로 따라가기 쉽습니다.
+CLIMATE_INSTRUCTION = (
+    "This is Pattaya, Thailand — a tropical location that is warm and humid "
+    "year-round. Unless the scene says otherwise, dress the person in light, "
+    "breathable summer clothing appropriate for hot weather (short sleeves, "
+    "tank tops, summer dresses, shorts, etc.), not long sleeves or heavy "
+    "layers. "
+)
 
-Output rules:
-- Write ONE tweet only.
-- Under 260 characters (Thai characters).
-- Plain text only, no markdown.
-- End the tweet with both hashtags #pattaya and #พัทยา and #fwb (always include both,
-  exactly once each, together at the end).
-- Do not repeat the same opening words every time, vary sentence structure.
-- Output ONLY the tweet text, nothing else (no preamble, no quotes around it).
-"""
-
-# 매번 조금씩 다른 방향으로 유도하기 위한 주제 로테이션.
-# 각 항목은 (텍스트 프롬프트용 설명, 이미지 프롬프트용 장면 설명) 튜플입니다.
-# 이미지 장면 설명은 generate_image.py 에서 그대로 재사용됩니다.
-TOPIC_SEEDS = [
-    (
-        "a moment from today's gym session",
-        "at a modern gym in Pattaya, mid-workout, gym clothes, "
-        "weights or cardio equipment in the background",
-    ),
-    (
-        "a small cultural difference you noticed today between Japan and Thailand",
-        "casually walking through a Pattaya street market or sidewalk, "
-        "everyday Thai city scenery in the background",
-    ),
-    (
-        "a new person you met recently and what that was like",
-        "sitting at a casual outdoor cafe table in Pattaya, relaxed pose",
-    ),
-    (
-        "a reflection on how your Thai (or English) is improving or not",
-        "sitting at a small desk or cafe corner with a notebook or phone, "
-        "soft indoor lighting",
-    ),
-    (
-        "food you ate today and a short story around it",
-        "at a Thai street food stall or restaurant table in Pattaya, "
-        "food visible nearby",
-    ),
-    (
-        "a thought about dating/meeting people as a foreigner in Thailand",
-        "walking along Pattaya beach promenade in the evening, "
-        "warm sunset lighting",
-    ),
-    (
-        "a workout milestone or a lesson learned from training",
-        "just finished a workout, gym locker room or gym entrance background, "
-        "slightly tired but happy expression",
-    ),
-    (
-        "something about your neighborhood or daily routine in Pattaya",
-        "on the balcony or street outside her apartment in Pattaya, "
-        "everyday morning atmosphere",
-    ),
-    (
-        "a friendship that's been forming with someone local",
-        "sitting on a bench in a Pattaya park or public space, casual daytime",
-    ),
-    (
-        "an honest, low-key reflection on loneliness or connection while living abroad",
-        "sitting alone by a window at night, city lights of Pattaya visible outside",
-    ),
+# 매번 같은 무표정/원본 표정이 반복되지 않도록, 표정을 매번 무작위로 지정합니다.
+EXPRESSIONS = [
+    "smiling naturally",
+    "laughing candidly",
+    "relaxed with a soft smile",
+    "focused and slightly serious",
+    "playful, mid-laugh",
+    "calm and thoughtful",
+    "genuinely happy, eyes crinkled",
+    "casually smirking",
 ]
 
 
-def pick_topic() -> tuple[str, str]:
-    """(텍스트용 주제 설명, 이미지용 장면 설명) 튜플을 하나 뽑아서 반환합니다.
-
-    main_post.py 에서 이 함수로 한 번만 주제를 뽑고, 텍스트/이미지 생성에
-    동일하게 넘겨서 트윗 내용과 사진 배경이 서로 어긋나지 않게 합니다.
-    """
-    return random.choice(TOPIC_SEEDS)
-
-
-def generate_tweet(topic_text: str | None = None) -> str:
-    """AI API를 호출해 트윗 한 건을 생성해서 반환합니다.
-
-    topic_text 를 지정하지 않으면 내부적으로 랜덤 주제를 하나 뽑아 사용합니다.
-    """
-    if topic_text is None:
-        topic_text, _ = pick_topic()
-
-    response = requests.post(
-        ANTHROPIC_API_URL,
-        headers={
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json={
-            "model": MODEL,
-            "max_tokens": 300,
-            "system": PERSONA_SYSTEM_PROMPT,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": f"Write today's tweet. Topic angle to draw from: {topic_text}",
-                }
-            ],
-        },
-        timeout=30,
+def _pick_base_image() -> str:
+    """assets/persona_base/ 폴더 안의 이미지 파일 중 하나를 무작위로 골라 경로를 반환."""
+    candidates = sorted(
+        glob.glob(os.path.join(BASE_IMAGE_DIR, "*.jpg"))
+        + glob.glob(os.path.join(BASE_IMAGE_DIR, "*.jpeg"))
+        + glob.glob(os.path.join(BASE_IMAGE_DIR, "*.png"))
     )
-    response.raise_for_status()
-    data = response.json()
+    if not candidates:
+        raise FileNotFoundError(
+            f"{BASE_IMAGE_DIR} 폴더에 기준 인물 사진이 없습니다. "
+            "assets/persona_base/ 폴더를 만들고 사진을 1장 이상 넣어두세요."
+        )
+    return random.choice(candidates)
 
-    tweet_text = "".join(
-        block["text"] for block in data["content"] if block["type"] == "text"
-    ).strip()
 
-    # 안전장치: 트위터 글자수 제한(280)을 넘지 않도록 자르기
-    if len(tweet_text) > 280:
-        tweet_text = tweet_text[:277].rsplit(" ", 1)[0] + "..."
+def generate_persona_image(scene_description: str, output_path: str = "output_image.png") -> str:
+    """기준 인물 사진 중 하나를 무작위로 골라, scene_description에 맞는 새
+    배경/옷차림/표정으로 변형해서 output_path에 저장하고, 저장된 경로를 반환합니다.
 
-    return tweet_text
+    실패 시 예외를 던지므로, 호출하는 쪽(main_post.py)에서 이미지 생성 실패를
+    텍스트만 게시하는 것으로 처리할 수 있도록 try/except로 감싸는 것을 권장합니다.
+    """
+    base_image_path = _pick_base_image()
+    expression = random.choice(EXPRESSIONS)
+
+    prompt = (
+        IDENTITY_LOCK_INSTRUCTION
+        + CLIMATE_INSTRUCTION
+        + f"Facial expression: {expression}. "
+        + "Scene: "
+        + scene_description
+    )
+
+    with open(base_image_path, "rb") as base_image_file:
+        output = replicate.run(
+            MODEL,
+            input={
+                "prompt": prompt,
+                "input_image": base_image_file,
+                "output_format": "png",
+            },
+        )
+
+    # replicate 최신 python 클라이언트는 FileOutput 객체(또는 그 리스트)를 반환합니다.
+    file_output = output[0] if isinstance(output, list) else output
+
+    with open(output_path, "wb") as f:
+        f.write(file_output.read())
+
+    return output_path
 
 
 if __name__ == "__main__":
-    _, scene = pick_topic()
-    print(generate_tweet())
-    print(f"(matching image scene: {scene})")
+    # 로컬 테스트용
+    test_scene = "at a modern gym in Pattaya, mid-workout, gym clothes"
+    path = generate_persona_image(test_scene)
+    print(f"이미지 생성 완료: {path}")
