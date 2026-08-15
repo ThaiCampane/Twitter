@@ -46,13 +46,23 @@ IDENTITY_LOCK_INSTRUCTION = (
 
 # 태국(파타야)은 연중 덥고 습한 열대 기후이므로, 장면 설명에 계절/날씨가
 # 따로 명시되지 않는 한 반팔/민소매/원피스 등 여름 옷차림을 기본으로 하도록
-# 강제합니다.
+# 강하게 강제합니다. (이전 버전보다 문구를 더 단정적으로 바꿔서, 원본 사진의
+# 긴팔 옷차림을 계속 따라가는 경향을 줄였습니다.)
 CLIMATE_INSTRUCTION = (
-    "This is Pattaya, Thailand — a tropical location that is warm and humid "
-    "year-round. Unless the scene says otherwise, dress the person in light, "
-    "breathable summer clothing appropriate for hot weather (short sleeves, "
-    "tank tops, summer dresses, shorts, etc.), not long sleeves or heavy "
-    "layers. "
+    "This is Pattaya, Thailand — a tropical location that is hot and humid "
+    "year-round, roughly 30-34°C (86-93°F). The person must be dressed in "
+    "short-sleeve or sleeveless summer clothing appropriate for hot weather: "
+    "tank tops, short-sleeve t-shirts, sundresses, shorts, athletic wear, "
+    "crop tops, or similar. Do NOT put her in long sleeves, jackets, hoodies, "
+    "sweaters, or any heavy/cold-weather clothing, unless the scene explicitly "
+    "describes a cold or indoor air-conditioned setting. "
+)
+
+# 체형 일관성을 위한 고정 지시 (매번 랜덤이 아니라 항상 동일하게 적용).
+BODY_TYPE_INSTRUCTION = (
+    "Body type: slim and slender build, with a curvy, hourglass silhouette "
+    "(defined waist, fuller bust and hips proportionate to her slim frame). "
+    "Keep this body type consistent in every image. "
 )
 
 EXPRESSIONS = [
@@ -117,6 +127,7 @@ def generate_persona_image(scene_description: str, output_path: str = "output_im
 
     prompt = (
         IDENTITY_LOCK_INSTRUCTION
+        + BODY_TYPE_INSTRUCTION
         + CLIMATE_INSTRUCTION
         + f"Facial expression: {expression}. "
         + f"Pose: {pose}. "
