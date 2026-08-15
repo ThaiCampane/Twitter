@@ -18,7 +18,7 @@ import os
 
 import replicate
 
-BASE_IMAGE_PATH = os.environ.get("PERSONA_BASE_IMAGE", "assets/persona_base.jpg")
+BASE_IMAGE_DIR = os.environ.get("PERSONA_BASE_IMAGE_DIR", "assets/persona_base")
 MODEL = "black-forest-labs/flux-kontext-pro"
 
 # 인물 정체성을 유지하라는 지시를 매번 공통으로 붙여줍니다.
